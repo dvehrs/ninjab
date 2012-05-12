@@ -97,7 +97,7 @@ function getOSinfo() {
 
 function folderInfo() {
     echoi "  Full path" "$(pwd)"
-    echoi "  Permissions" "$(ls -ld .)"
+    echoi "  Permissions" "$(ls --color=never -ld .)"
     echoi "  Directory count" "$(($(find . -maxdepth 1 -type d | wc -l)-1))"
     echoi "  .directory count" "$(find . -maxdepth 1 -type d -name '.*' | wc -l | sed 's/[^0-9]//g')"
     echoi "  File count" "$(find . -maxdepth 1 -type f | wc -l | sed 's/[^0-9]//g')"
