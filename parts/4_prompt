@@ -10,9 +10,9 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Bash prompt
 #-------------------------------------------------------------
-# Orginal Filename:      custom_prompt.sh
+# Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 12 Jul 2005 13:29:40 by Dave Vehrs
+# Last Modified: 13 May 2012 05:23:09 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -241,6 +241,22 @@ function promptcmd() {
 	    [ "$(svn st &> /dev/null)" ] && DIRTY='*'
             PS1="${PS1}\[$(set_color magenta)\][svn:${REV}${DIRTY}]\[$(set_color)\] "
 	fi
+    fi
+
+    # Display if new Tripwire reports have been generated and the core database
+    # needs updating.
+    if [ ${load_part_prompt_tripwire} ]; then
+        if [ -f /var/lib/tripwire/${HOSTNAME}.twd ]; then
+            # get time in seconds since the Tripwire database was updated.
+            local TRIPDB_UPDATE=$(stat -c %Y /var/lib/tripwire/${HOSTNAME}.twd)
+            if [ -d /var/lib/tripwire/report ]; then
+                # get time the last report was submitted
+                local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
+                if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
+                    PS1="${PS1}\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
+                fi
+            fi
+        fi
     fi
 
     #  GIT status

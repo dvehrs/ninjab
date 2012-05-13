@@ -71,6 +71,7 @@ load_part_aliases_oneletters=1 # Load a couple of one-letters aliases
 load_part_aliases_ls=1 # More out of the default 'ls'
 load_part_aliases_ls_shortcuts=1 # Load . .. ... .... aliases for pwd, cd .., cd ../.. and so on..
 load_part_aliases_same=1 # To get common enhancements for some commands, like rm will be 'rm -v -i', comment out to deny self aliasing.
+load_part_aliases_tripwire=1 # Load Tripwire aliases.  Requires sudo for non-root users.
 
 
 ########################################
@@ -95,6 +96,11 @@ load_part_prompt=1
 
 # Show runtime of last command if it took more than X seconds, comment out to disable
 load_part_prompt_slowcommandwarn=10
+
+# If Tripwire is installed, then report on reports that are newer than the base
+# database and an update needs to be run.
+load_part_prompt_tripwire=1
+
 
 ########################################
 # parts/5_stateinfo
