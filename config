@@ -117,3 +117,10 @@ load_part_stateinfo_maxlines=50 # How many lines should we accept before asking 
 # Holds function which can be used as pipes.
 ########################################
 load_part_pipes=1
+
+########################################
+# parts/6_lsof
+#
+# Holds functions to make calling lsof easy and to format the output.
+########################################
+load_part_lsof=1
