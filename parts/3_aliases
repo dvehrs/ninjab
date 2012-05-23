@@ -115,9 +115,9 @@ fi
 if [ ! -z ${load_part_aliases_tripwire} ]; then
     if [ $(id -u) -eq 0 ]; then
         # Run Tripwire file check
-        alias tripc='tripwire -m c -n'
+        alias tripc='tripwire --check --no-tty-output'
         # Update database from latest report
-        alias tripu='tripwire -m u -r `ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1\`'
+        alias tripu='tripwire --update --twrfile `ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1\`'
     else
         # For non-root users call tripwire via sudo.
         # Run Tripwire file check
