@@ -116,13 +116,23 @@ if [ ! -z ${load_part_aliases_tripwire} ]; then
     if [ $(id -u) -eq 0 ]; then
         # Run Tripwire file check
         alias tripc='tripwire --check --no-tty-output'
-        # Update database from latest report
-        alias tripu='tripwire --update --twrfile `ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1\`'
+        # Update database from latest report and then shred report
+        function tripu() {
+            # get lastest report name
+            TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
+            tripwire --update --twrfile ${TWRFILE}
+            shred -u ${TWRFILE}
+        }
     else
         # For non-root users call tripwire via sudo.
         # Run Tripwire file check
-        alias tripc='sudo tripwire -m c -n'
+        alias tripc='sudo tripwire --check --no-tty-output'
         # Update database from latest report
-        alias tripu='sudo tripwire -m u -r `ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`'
+        function tripu() {
+            # get lastest report name
+            TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
+            sudo tripwire --update --twrfile ${TWRFILE}
+            sudo shred -u ${TWRFILE}
+        }
     fi
 fi

@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 23 May 2012 02:29:28 PM by Dave
+# Last Modified: 23 May 2012 03:19:47 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -253,10 +253,13 @@ function promptcmd() {
                 # get time in seconds since the Tripwire database was updated.
                 local TRIPDB_UPDATE=$(stat -c %Y /var/lib/tripwire/${HOSTNAME}.twd)
                 if [ -d /var/lib/tripwire/report ]; then
-                    # get time the last report was submitted
-                    local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
-                    if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
-                        PS1="${PS1}\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
+                    # Test to be sure reports exist.  Otherwise generates errors.
+                    if [[ $(ls /var/lib/tripwire/report/${HOSTNAME}*.twr 2>/dev/null)  ]]; then 
+                        # get time the last report was submitted
+                        local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
+                        if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
+                            PS1="${PS1}\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
+                        fi
                     fi
                 fi
             fi
