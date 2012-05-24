@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 23 May 2012 03:19:47 PM by Dave
+# Last Modified: 23 May 2012 08:45:29 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -129,6 +129,9 @@ function promptcmd() {
         case ${TERM} in
             xterm*  )
                 local TITLEBAR='\[\033]0;\u@\h: { \w }  \007\]'
+                ;;
+            screen*  )
+                local TITLEBAR='\[\033k${USER}@${HOSTNAME} { $(prompt_workingdir) }\033\\\]'
                 ;;
             *       )
                 local TITLEBAR=''
