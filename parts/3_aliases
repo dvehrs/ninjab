@@ -118,10 +118,15 @@ if [ ! -z ${load_part_aliases_tripwire} ]; then
         alias tripc='tripwire --check --no-tty-output'
         # Update database from latest report and then shred report
         function tripu() {
-            # get lastest report name
-            TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
-            tripwire --update --twrfile ${TWRFILE}
-            shred -u ${TWRFILE}
+            if [[ $(ls /var/lib/tripwire/report/${HOSTNAME}*.twr 2>/dev/null) ]]; then 
+                # get latest report name
+                TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
+                tripwire --update --twrfile ${TWRFILE}
+                shred -u ${TWRFILE}
+            else
+                echo "TRIPWIRE: NO REPORT FOUND."
+                echo "    Run tripwire --check or tripc to create"
+            fi
         }
     else
         # For non-root users call tripwire via sudo.
@@ -129,10 +134,15 @@ if [ ! -z ${load_part_aliases_tripwire} ]; then
         alias tripc='sudo tripwire --check --no-tty-output'
         # Update database from latest report
         function tripu() {
-            # get lastest report name
-            TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
-            sudo tripwire --update --twrfile ${TWRFILE}
-            sudo shred -u ${TWRFILE}
+            if [[ $(ls /var/lib/tripwire/report/${HOSTNAME}*.twr 2>/dev/null) ]]; then 
+                # get latest report name
+                TWRFILE=`ls -1ct /var/lib/tripwire/report/\${HOSTNAME}*.twr | head -1`
+                sudo tripwire --update --twrfile ${TWRFILE}
+                sudo shred -u ${TWRFILE}
+            else
+                echo "TRIPWIRE: NO REPORT FOUND."
+                echo "    Run tripwire --check or tripc to create"
+            fi
         }
     fi
 fi
