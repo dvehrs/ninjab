@@ -10,10 +10,10 @@ int_ninjab_available_parts="$int_ninjab_available_parts 3_aliases"
 #---------------------------------------------------------------------
 # Aliases
 #
-# Be carefull with overwriting commands in eg OSX. It doesnt
-# take care of eg options that is repeated.
-# Alias for 'tail -n 30' works fine in Linux when adding another
-# -n, so it is 'tail -n 30 -n 1', but not in OSX (and proably others)
+# Be careful with overwriting commands in some operating systems, eg OSX. It
+# doesn't take care of options that are repeated.  An alias for 'tail -n 30'
+# works fine in Linux when adding another -n, so it becomes 'tail -n 30 -n 1',
+# but will error in OSX (and probably others).
 #---------------------------------------------------------------------
 
 # ch... Turn on a little verbosety
@@ -146,3 +146,37 @@ if [ ! -z ${load_part_aliases_tripwire} ]; then
         }
     fi
 fi
+
+# ------------------------------------------------------------------------------
+# Set Title on Terminals                                                     
+# ------------------------------------------------------------------------------
+function xtitle() {
+    case "$TERM" in
+        *term | rxvt)
+            echo -n -e "\033]0;$*\007" ;;
+        screen* )
+            echo -ne "\033k $*\033\\" ;;
+        *)
+            ;;
+    esac
+}
+
+if [ -f /usr/bin/htop ]; then
+    # Uses htop it its installed instead of top
+    alias top='xtitle Processes on ${HOSTNAME} && htop'
+    # And aliases htop so that it sets the name like the default.
+    alias htop='xtitle Processes on ${HOSTNAME} && htop'
+else
+    # Uses top
+    alias top='xtitle Processes on ${HOSTNAME} && top'
+fi
+
+alias make='xtitle Making $(basename $PWD) ; make'
+alias irssi='xtitle IRSSI; torify irssi'
+
+function man() {
+    for i ; do
+        xtitle The $(basename $1|tr -d .[:digit:]) manual
+        command man -a "$1"
+    done
+}

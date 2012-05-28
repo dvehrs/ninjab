@@ -194,6 +194,21 @@ if which less &> /dev/null ; then
     alias more='less'
     export PAGER=less
     export LESSCHARSET='utf-8'
-    export LESSOPEN='|/usr/bin/lesspipe %s 2>&-'
+    if [ -f /usr/bin/lesspipe ]; then
+        eval "$(/usr/bin/lesspipe)"
+        # sets LESSOPEN and LESSCLOSE
+    fi
     export LESS='-i -w -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
 fi
+
+
+# Bzip2 Options
+if [[ -f /bin/bzip2 || -f /usr/bin/bzip2 ]]; then
+    export BZIP2='-9'
+fi
+# Gzip Options                                                 
+if [[ -f /bin/gzip || -f /usr/bin/gzip ]]; then
+    export GZIP='-9 --name'
+fi
+# CVS Options
+export CVS_RSH=ssh
