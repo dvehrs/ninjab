@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 23 May 2012 08:45:29 PM by Dave
+# Last Modified: 29 May 2012 05:58:14 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -124,17 +124,56 @@ function promptcmd() {
         local SESS_SRC=$(who | grep "$TTY "  | awk '{print $6 }')
     fi
 
+    # Test for local or remote connections
+    if [[ ${SSH_CLIENT} ]] || [[ ${SSH2_CLIENT} ]]; then
+        SSH_FLAG=1
+    fi
+    if [ ${SSH_FLAG} -eq 1 ]; then
+        local CONNECTION_TYPE=SSH
+        local TITLE_PREFIX="SSH: "
+    else
+        local parent_process=$(ps -p $PPID -o comm | tail -n 1)
+        if [[ "${parent_process}" == "login" ]]; then
+            local grandparent_pid=$(grep PPid /proc/${PPID}/status | cut -f 2 -d :)
+            local grandparent_pname=$(ps -p ${grandparent_pid} -o comm | tail -n 1)
+            if [[ "${grandparent_pname}" == "in.rlogind" ]]; then
+                local CONNECTION_TYPE=RSH
+                local TITLE_PREFIX="RSH: "
+            elif [[ "${grandparent_pname}" == "in.telnetd" ]]; then
+                # Need to test Telnet
+                local CONNECTION_TYPE=TELNET
+                local TITLE_PREFIX="Telnet: "
+            fi
+        else
+            local CONNECTION_TYPE=LOCAL
+            if [[ ${SUDO_USER} ]]; then
+                local TITLE_PREFIX="SUDO: "
+            else
+                local TITLE_PREFIX="AAA "
+            fi
+        fi
+    fi
+
+    # As Sudo session can be within any of the other above session types, it
+    # needs to be moved to after the loop and appending it's information to the
+    # existing TITLE_PREFIX.
+
     # Titlebar
+    # Window Titles are correct if you do a RSH connection to another host from
+    # within a Screen session.  However if you do a Screen session within an
+    # existing RSH session the title will show Screen as if it was local.
     if [ -z "${load_part_prompt_dontset_titlebar}" ]; then
         case ${TERM} in
             xterm*  )
-                local TITLEBAR='\[\033]0;\u@\h: { \w }  \007\]'
+                local TITLEBAR="\[\033]0;${TITLE_PREFIX}\u@\h { \w }  \007\]"
                 ;;
             screen*  )
-                local TITLEBAR='\[\033k${USER}@${HOSTNAME} { $(prompt_workingdir) }\033\\\]'
+                local TITLEBAR='\[\033k'
+                TITLEBAR+="${TITLE_PREFIX}\u@\h { $(prompt_workingdir) }"
+                TITLEBAR+='\033\\\]'
                 ;;
             *       )
-                local TITLEBAR=''
+                local TITLEBAR=""
                 ;;
         esac
     fi
@@ -164,7 +203,7 @@ function promptcmd() {
     fi
     [ -z "${system_category}" ] || PS1="${PS1}${system_type_color:-""}(${system_category})\[$(set_color)\] "
 
-    PS1="${PS1}${TITLEBAR}"
+   PS1+="${TITLEBAR}"
 
     # Test for day change.
     if [ ! -z ${load_part_prompt_notifyDaychange} ]; then
@@ -173,7 +212,7 @@ function promptcmd() {
 	else
             local today=$(date +%A)
             if [ "${DAY}" != "${today}" ]; then
-		PS1="${PS1}\n\[$(set_color green)\]Day changed to $(date '+%A, %d %B %Y').\[$(set_color)\]\n"
+		PS1+="\n\[$(set_color green)\]Day changed to $(date '+%A, %d %B %Y').\[$(set_color)\]\n"
 		export DAY=$today
 	    fi
 	fi
@@ -183,57 +222,72 @@ function promptcmd() {
     if [ ${UID} -eq 0 ] ; then
         if [ "${USER}" == "${LOGNAME}" ]; then
             if [[ ${SUDO_USER} ]]; then
-                PS1="${PS1}\[$(set_color red)\]\u\[$(set_color)\]"
+                PS1+="\[$(set_color red)\]\u\[$(set_color)\]"
             else
-                PS1="${PS1}\[$(set_color ered)\]\u\[$(set_color)\]"
+                PS1+="\[$(set_color ered)\]\u\[$(set_color)\]"
             fi
         else
-            PS1="${PS1}\[$(set_color yellow)\]\u\[$(set_color)\]"
+            PS1+="\[$(set_color yellow)\]\u\[$(set_color)\]"
         fi
     else
         if [ ${USER} == ${LOGNAME} ]; then
-            PS1="${PS1}\[$(set_color green)\]\u\[$(set_color)\]"
+            PS1+="\[$(set_color green)\]\u\[$(set_color)\]"
         else
-            PS1="${PS1}\[$(set_color eyellow)\]\u\[$(set_color)\]"
+            PS1+="\[$(set_color eyellow)\]\u\[$(set_color)\]"
         fi
     fi
 
     # HTTP Proxy var configured or not
     if [ -n "$http_proxy" ] ; then
-        PS1="${PS1}\[$(set_color green)\]@\[$(set_color)\]"
+        PS1+="\[$(set_color green)\]@\[$(set_color)\]"
     else
-        PS1="${PS1}\[$(set_color ered)\]@\[$(set_color)\]"
+        PS1+="\[$(set_color ered)\]@\[$(set_color)\]"
     fi
 
     # Host
-    if [[ ${SSH_CLIENT} ]] || [[ ${SSH2_CLIENT} ]]; then
-        SSH_FLAG=1
-    fi
-    if [ ${SSH_FLAG} -eq 1 ]; then
-        PS1="${PS1}\[$(set_color cyan)\]\h\[$(set_color)\] "
-    elif [[ -n ${SESS_SRC} ]]; then
-        if [ "${SESS_SRC}" == "(:0.0)" ]; then
-            PS1="${PS1}\[$(set_color green)\]\h\[$(set_color)\] "
-        else
-            local parent_process=$(ps -p $PPID -o comm | tail -n 1)
-            if [[ "$parent_process" == "in.rlogind*" ]]; then
-                PS1="${PS1}\[$(set_color eyellow)\]\h\[$(set_color)\] "
-            elif [[ "$parent_process" == "in.telnetd*" ]]; then
-                PS1="${PS1}\[$(set_color yellow)\]\h\[$(set_color)\] "
-            else
-                PS1="${PS1}\[$(set_color ered)\]\h\[$(set_color)\] "
-            fi
-        fi
-    elif [[ "${SESS_SRC}" == "" ]]; then
-        PS1="${PS1}\[$(set_color green)\]\h\[$(set_color)\] "
-    else
-        PS1="${PS1}\[$(set_color red)\]\h\[$(set_color)\] "
-    fi
+    case ${CONNECTION_TYPE} in 
+        LOCAL )
+            PS1+="\[$(set_color green)\]\h\[$(set_color)\] "
+            ;;
+        SSH )
+            PS1+="\[$(set_color cyan)\]\h\[$(set_color)\] "
+            ;;
+        RSH )
+            PS1+="\[$(set_color eyellow)\]\h\[$(set_color)\] "
+            ;;
+        TELNET )
+            PS1+="\[$(set_color yellow)\]\h\[$(set_color)\] "
+            ;;
+    esac
+
+#    if [[ ${SSH_CLIENT} ]] || [[ ${SSH2_CLIENT} ]]; then
+#        SSH_FLAG=1
+#    fi
+#    if [ ${SSH_FLAG} -eq 1 ]; then
+#        PS1+="\[$(set_color cyan)\]\h\[$(set_color)\] "
+#    elif [[ -n ${SESS_SRC} ]]; then
+#        if [ "${SESS_SRC}" == "(:0.0)" ]; then
+#            PS1+="\[$(set_color green)\]\h\[$(set_color)\] "
+#        else
+#            local parent_process=$(ps -p $PPID -o comm | tail -n 1)
+#            if [[ "$parent_process" == "in.rlogind*" ]]; then
+#                PS1+="\[$(set_color eyellow)\]\h\[$(set_color)\] "
+#            elif [[ "$parent_process" == "in.telnetd*" ]]; then
+#                PS1+="\[$(set_color yellow)\]\h\[$(set_color)\] "
+#            else
+#                PS1+="\[$(set_color ered)\]\h\[$(set_color)\] "
+#            fi
+#        fi
+#    elif [[ "${SESS_SRC}" == "" ]]; then
+#        PS1+="\[$(set_color green)\]\h\[$(set_color)\] "
+#    else
+#        PS1+="\[$(set_color red)\]\h\[$(set_color)\] "
+#    fi
 
     # Check for python virtualenv
     if [[ $VIRTUAL_ENV ]]; then
 	VIRTNAME=$(basename $VIRTUAL_ENV)
-	PS1="${PS1}\[$(set_color ecyan)[venv:${VIRTNAME}]\[$(set_color)\] "
+	PS1+="\[$(set_color ecyan)[venv:${VIRTNAME}]\[$(set_color)\] "
     fi
 
     # SVN status if .svn exist
@@ -242,7 +296,7 @@ function promptcmd() {
 	    local DIRTY REV=$(svnversion . 2>/dev/null)
 	    [ "$REV" ] || REV='?'
 	    [ "$(svn st &> /dev/null)" ] && DIRTY='*'
-            PS1="${PS1}\[$(set_color magenta)\][svn:${REV}${DIRTY}]\[$(set_color)\] "
+            PS1+="\[$(set_color magenta)\][svn:${REV}${DIRTY}]\[$(set_color)\] "
 	fi
     fi
 
@@ -250,7 +304,7 @@ function promptcmd() {
     # needs updating.
     if [ ${load_part_prompt_tripwire} ]; then
         if [[ $(pgrep -f "sudo tripwire --check*") ]] || [[ $(pgrep -u root -f /usr/sbin/tripwire) ]]; then
-            PS1="${PS1}\[$(set_color red)\][Tripwire Check Running]\[$(set_color)\] "
+            PS1+="\[$(set_color red)\][Tripwire Check Running]\[$(set_color)\] "
         else
             if [ -f /var/lib/tripwire/${HOSTNAME}.twd ]; then
                 # get time in seconds since the Tripwire database was updated.
@@ -261,7 +315,7 @@ function promptcmd() {
                         # get time the last report was submitted
                         local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
                         if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
-                            PS1="${PS1}\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
+                            PS1+="\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
                         fi
                     fi
                 fi
@@ -285,21 +339,21 @@ function promptcmd() {
             else
                 AHEAD=''
             fi
-            PS1="${PS1}\[$(set_color magenta)\][git:${GITSTATUS}${DIRTY}${AHEAD}]\[$(set_color)\] "
+            PS1+="\[$(set_color magenta)\][git:${GITSTATUS}${DIRTY}${AHEAD}]\[$(set_color)\] "
 	fi
     fi
 
     # Exit status of the last command run. Must run the command itself from the PS1, so we must pass on this part
 
-    PS1="${PS1}\`let exitstatus=\$? ; if [[ \${exitstatus} != 0 ]] ; then echo -ne \"\\[$(set_color red)\][es:\${exitstatus}]\\[$(set_color)\] \" ; fi\`"
+    PS1+="\`let exitstatus=\$? ; if [[ \${exitstatus} != 0 ]] ; then echo -ne \"\\[$(set_color red)\][es:\${exitstatus}]\\[$(set_color)\] \" ; fi\`"
 
     # Detached Screen Sessions
     if which screen &> /dev/null; then
       DTCHSCRN=$(screen -ls | grep -c Detach)
       if [ ${DTCHSCRN} -gt 2 ]; then
-          PS1="${PS1}\[$(set_color red)\][scr:${DTCHSCRN}]\[$(set_color)\] "
+          PS1+="\[$(set_color red)\][scr:${DTCHSCRN}]\[$(set_color)\] "
       elif [ ${DTCHSCRN} -gt 0 ]; then
-          PS1="${PS1}\[$(set_color yellow)\][scr:${DTCHSCRN}]\[$(set_color)\] "
+          PS1+="\[$(set_color yellow)\][scr:${DTCHSCRN}]\[$(set_color)\] "
       fi
     fi
 
@@ -307,26 +361,26 @@ function promptcmd() {
     if which tmux &> /dev/null; then
 	local DTCHTMUX=$(tmux ls 2> /dev/null | grep -v "(attached)" | wc -l | sed -e 's/[^0-9]//g')
 	if [ ${DTCHTMUX} -gt 2 ]; then
-            PS1="${PS1}\[$(set_color red)\][tmux:${DTCHTMUX}]\[$(set_color)\] "
+            PS1+="\[$(set_color red)\][tmux:${DTCHTMUX}]\[$(set_color)\] "
 	elif [ ${DTCHTMUX} -gt 0 ]; then
-            PS1="${PS1}\[$(set_color yellow)\][tmux:${DTCHTMUX}]\[$(set_color)\] "
+            PS1+="\[$(set_color yellow)\][tmux:${DTCHTMUX}]\[$(set_color)\] "
 	fi
     fi
 
     # Backgrounded running jobs
     local BKGJBS=$(jobs -r | wc -l | sed -e 's/[^0-9]//g' )
     if [ ${BKGJBS} -gt 2 ]; then
-        PS1="${PS1}\[$(set_color red)\][bg:${BKGJBS}]\[$(set_color)\] "
+        PS1+="\[$(set_color red)\][bg:${BKGJBS}]\[$(set_color)\] "
     elif [ ${BKGJBS} -gt 0 ]; then
-        PS1="${PS1}\[$(set_color yellow)\][bg:${BKGJBS}]\[$(set_color)\] "
+        PS1+="\[$(set_color yellow)\][bg:${BKGJBS}]\[$(set_color)\] "
     fi
 
     # Stopped Jobs
     local STPJBS=$(jobs -s | wc -l | sed -e 's/[^0-9]//g' )
     if [ ${STPJBS} -gt 2 ]; then
-        PS1="${PS1}\[$(set_color red)\][stp:${STPJBS}]\[$(set_color)\] "
+        PS1+="\[$(set_color red)\][stp:${STPJBS}]\[$(set_color)\] "
     elif [ ${STPJBS} -gt 0 ]; then
-        PS1="${PS1}\[$(set_color yellow)\][stp:${STPJBS}]\[$(set_color)\] "
+        PS1+="\[$(set_color yellow)\][stp:${STPJBS}]\[$(set_color)\] "
     fi
 
     # Time of last command
@@ -337,7 +391,7 @@ function promptcmd() {
 	    local TOTTIME=$((${_NJB_NOWTIME} - ${_NJB_PREVTIME}))
 	    if [ ${TOTTIME} -gt ${load_part_prompt_slowcommandwarn} ]; then
 		local TOTTIME=$(int_prompt_hms ${TOTTIME})
-		PS1="${PS1}\[$(set_color yellow)\][cmdtime:${TOTTIME}]\[$(set_color)\] "
+		PS1+="\[$(set_color yellow)\][cmdtime:${TOTTIME}]\[$(set_color)\] "
 	    fi
 	fi
     fi
@@ -347,27 +401,27 @@ function promptcmd() {
     if [ ${UID} -eq 0 ]; then
         if [ "${USER}" == "${LOGNAME}" ]; then
             if [[ ${SUDO_USER} ]]; then
-                PS1="${PS1}\[$(set_color red)\]"
+                PS1+="\[$(set_color red)\]"
             else
-                PS1="${PS1}\[$(set_color ered)\]"
+                PS1+="\[$(set_color ered)\]"
             fi
         else
-            PS1="${PS1}\[$(set_color yellow)\]"
+            PS1+="\[$(set_color yellow)\]"
         fi
     else
         if [ "${USER}" == "${LOGNAME}" ]; then
-            PS1="${PS1}\[$(set_color green)\]"
+            PS1+="\[$(set_color green)\]"
         else
-            PS1="${PS1}\[$(set_color eyellow)\]"
+            PS1+="\[$(set_color eyellow)\]"
         fi
     fi
-    PS1="${PS1}{ "
+    PS1+="{ "
 
     # Working directory
     if [ -w "${PWD}" ]; then
-        PS1="${PS1}\[$(set_color green)\]$(prompt_workingdir)"
+        PS1+="\[$(set_color green)\]$(prompt_workingdir)"
     else
-        PS1="${PS1}\[$(set_color red)\]$(prompt_workingdir)"
+        PS1+="\[$(set_color red)\]$(prompt_workingdir)"
     fi
 
     # Closing bracket } and $\#
@@ -376,31 +430,31 @@ function promptcmd() {
         user_mark="\[$(set_color red)\]#"
         if [ "${USER}" == "${LOGNAME}" ]; then
             if [[ ${SUDO_USER} ]]; then
-                PS1="${PS1}\[$(set_color red)\]"
+                PS1+="\[$(set_color red)\]"
             else
-                PS1="${PS1}\[$(set_color ered)\]"
+                PS1+="\[$(set_color ered)\]"
             fi
         else
-            PS1="${PS1}\[$(set_color yellow)\]"
+            PS1+="\[$(set_color yellow)\]"
         fi
     else
         user_mark="\[$(set_color green)\]$"
         if [ "${USER}" == "${LOGNAME}" ]; then
-            PS1="${PS1}\[$(set_color green)\]"
+            PS1+="\[$(set_color green)\]"
         else
-            PS1="${PS1}\[$(set_color eyellow)\]"
+            PS1+="\[$(set_color eyellow)\]"
         fi
     fi
 
-    PS1="${PS1} }$user_mark\[$(set_color)\] "
+    PS1+=" }$user_mark\[$(set_color)\] "
 }
 
 # Trim working dir to 1/3 the screen width
 function prompt_workingdir() {
-    local pwdmaxlen=$(($COLUMNS))
-    let pwdmaxlen=$pwdmaxlen/3
+    local pwdmaxlen=$((${COLUMNS}))
+    let pwdmaxlen=${pwdmaxlen}/3
     local trunc_symbol="..."
-    if [[ $PWD == $HOME* ]]; then
+    if [[ ${PWD} == ${HOME}* ]]; then
 	newPWD="~${PWD#$HOME}"
     else
 	newPWD=${PWD}
@@ -420,20 +474,41 @@ function prompt_workingdir() {
 # 3   Display promptcmd for all other cases.
 
 function load_prompt() {
-    # Get PIDs
+    # Get process and parent process names.
     local parent_process=$(ps -p $PPID -o comm | tail -n 1)
     local my_process=$(ps -p $$ -o comm | tail -n 1)
-
+     
     # Trap DEBUG to be able to set a timer
     if [ ${load_part_prompt_slowcommandwarn} ]; then
 	trap 'if [ "x${_NJB_ENABLETIMER}" == "xyes" ]; then _NJB_PREVTIME=$(date +%s); _NJB_ENABLETIMER=no; fi' DEBUG
     fi
 
-    if  [[ $parent_process == script* ]]; then
-        #PROMPT_COMMAND=""
-        PS1="\t - \# - \u@\H { \w }\$ "
+    if  [[ "${parent_process}" == "script" ]]; then
+        # This PROMPT_COMMAND must be uncommented to be sure that it's reset for
+        # script sessions.  Otherwise the PROMPT_COMMAND will run and replace
+        # whatever we set PS1 to here.
+        PROMPT_COMMAND=""
+
+        case ${TERM} in
+            xterm*  )
+                PS1="\[\033]0;SCRIPT: \u@\h { \w }  \007\]"
+                PS1+="\t - \# - \u@\H { \w }\$ "
+                ;;
+            screen*  )
+                # this is currently untested due to errors starting script in
+                # screen
+                PS1='\[\033k'
+                PS1+="SCREEN: SCRIPT: \u@\h { $(prompt_workingdir) }"
+                PS1+='\033\\\]'
+                PS1+="\t - \# - \u@\H { \w }\$ "
+                ;;
+            *       )
+                PS1="\t - \# - \u@\H { \w }\$ "
+                ;;
+        esac
     elif [[ $parent_process == emacs* || $parent_process == xemacs* ]]; then
-        #PROMPT_COMMAND=""
+        # Leave uncommented. Same reason as above.
+        PROMPT_COMMAND=""
         PS1="\u@\h { \w }\$ "
     else
         export DAY=$(date +%A)
