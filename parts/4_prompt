@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 31 May 2012 02:41:22 PM by Dave
+# Last Modified: 31 May 2012 02:55:05 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -99,7 +99,7 @@ EOF
 
 function int_prompt_get_color() {
     # TODO: Work in progress, not done
-    # Better handeling of colors in the prompt. Will be faster because it assigns variables of color type at the beginning, can be used for theming as well
+    # Better handling of colors in the prompt. Will be faster because it assigns variables of color type at the beginning, can be used for theming as well
     echo
 }
 
@@ -134,20 +134,20 @@ function promptcmd() {
             local grandparent_pname=$(ps -p ${grandparent_pid} -o comm | tail -n 1)
             if [[ "${grandparent_pname}" == "in.rlogind" ]]; then
                 local CONNECTION_TYPE=RSH
-                local TITLE_PREFIX="Rsh: "
+                local TITLE_PREFIX="RSH: "
             elif [[ "${grandparent_pname}" == "in.telnetd" ]]; then
                 # Need to test Telnet
                 local CONNECTION_TYPE=TELNET
-                local TITLE_PREFIX="Telnet: "
+                local TITLE_PREFIX="TELNET: "
             fi
         else
             local CONNECTION_TYPE=LOCAL
-            local TITLE_PREFIX="Local: "
+            local TITLE_PREFIX="LOCAL: "
         fi
     fi
 
     if [[ ${SUDO_USER} ]]; then
-        local TITLE_PREFIX+="Sudo: "
+        local TITLE_PREFIX+="SUDO: "
     fi
 
     
