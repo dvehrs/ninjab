@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 29 May 2012 05:58:14 PM by Dave
+# Last Modified: 31 May 2012 02:41:22 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -119,10 +119,6 @@ function int_prompt_hms() {
 function promptcmd() {
     history -a
     local SSH_FLAG=0
-    local TTY=$(tty | awk -F/dev/ '{print $2}')
-    if [[ ${TTY} ]]; then
-        local SESS_SRC=$(who | grep "$TTY "  | awk '{print $6 }')
-    fi
 
     # Test for local or remote connections
     if [[ ${SSH_CLIENT} ]] || [[ ${SSH2_CLIENT} ]]; then
@@ -138,7 +134,7 @@ function promptcmd() {
             local grandparent_pname=$(ps -p ${grandparent_pid} -o comm | tail -n 1)
             if [[ "${grandparent_pname}" == "in.rlogind" ]]; then
                 local CONNECTION_TYPE=RSH
-                local TITLE_PREFIX="RSH: "
+                local TITLE_PREFIX="Rsh: "
             elif [[ "${grandparent_pname}" == "in.telnetd" ]]; then
                 # Need to test Telnet
                 local CONNECTION_TYPE=TELNET
@@ -146,13 +142,15 @@ function promptcmd() {
             fi
         else
             local CONNECTION_TYPE=LOCAL
-            if [[ ${SUDO_USER} ]]; then
-                local TITLE_PREFIX="SUDO: "
-            else
-                local TITLE_PREFIX="AAA "
-            fi
+            local TITLE_PREFIX="Local: "
         fi
     fi
+
+    if [[ ${SUDO_USER} ]]; then
+        local TITLE_PREFIX+="Sudo: "
+    fi
+
+    
 
     # As Sudo session can be within any of the other above session types, it
     # needs to be moved to after the loop and appending it's information to the
