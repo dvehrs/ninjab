@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 31 May 2012 03:26:37 PM by Dave
+# Last Modified: 31 May 2012 03:46:43 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -86,6 +86,8 @@ cat <<EOF
        $(set_color yellow tput)Yellow$(set_color none tput)     == 1-2
        $(set_color red tput)Red$(set_color none tput)        == 3+
      $(set_color yellow tput)[cmdtime:#]$(set_color none tput) ==== Number of seconds the previous command took
+     $(set_color red tput)[TW: check]$(set_color none tput) ==== Tripwire --check running.
+     $(set_color yellow tput)[TW:+]$(set_color none tput)      ==== Tripwire report available to update database.
    CURRENT DIRECTORY:     (truncated to 1/3 screen width)
      $(set_color red tput)Red$(set_color none tput)          == Current user does not have write priviledges
      $(set_color green tput)Green$(set_color none tput)        == Current user does have write priviledges
@@ -267,30 +269,6 @@ function promptcmd() {
             ;;
     esac
 
-#    if [[ ${SSH_CLIENT} ]] || [[ ${SSH2_CLIENT} ]]; then
-#        SSH_FLAG=1
-#    fi
-#    if [ ${SSH_FLAG} -eq 1 ]; then
-#        PS1+="\[$(set_color cyan)\]\h\[$(set_color)\] "
-#    elif [[ -n ${SESS_SRC} ]]; then
-#        if [ "${SESS_SRC}" == "(:0.0)" ]; then
-#            PS1+="\[$(set_color green)\]\h\[$(set_color)\] "
-#        else
-#            local parent_process=$(ps -p $PPID -o comm | tail -n 1)
-#            if [[ "$parent_process" == "in.rlogind*" ]]; then
-#                PS1+="\[$(set_color eyellow)\]\h\[$(set_color)\] "
-#            elif [[ "$parent_process" == "in.telnetd*" ]]; then
-#                PS1+="\[$(set_color yellow)\]\h\[$(set_color)\] "
-#            else
-#                PS1+="\[$(set_color ered)\]\h\[$(set_color)\] "
-#            fi
-#        fi
-#    elif [[ "${SESS_SRC}" == "" ]]; then
-#        PS1+="\[$(set_color green)\]\h\[$(set_color)\] "
-#    else
-#        PS1+="\[$(set_color red)\]\h\[$(set_color)\] "
-#    fi
-
     # Check for python virtualenv
     if [[ $VIRTUAL_ENV ]]; then
 	VIRTNAME=$(basename $VIRTUAL_ENV)
@@ -305,29 +283,6 @@ function promptcmd() {
 	    [ "$(svn st &> /dev/null)" ] && DIRTY='*'
             PS1+="\[$(set_color magenta)\][svn:${REV}${DIRTY}]\[$(set_color)\] "
 	fi
-    fi
-
-    # Display if new Tripwire reports have been generated and the core database
-    # needs updating.
-    if [ ${load_part_prompt_tripwire} ]; then
-        if [[ $(pgrep -f "sudo tripwire --check*") ]] || [[ $(pgrep -u root -f /usr/sbin/tripwire) ]]; then
-            PS1+="\[$(set_color red)\][Tripwire Check Running]\[$(set_color)\] "
-        else
-            if [ -f /var/lib/tripwire/${HOSTNAME}.twd ]; then
-                # get time in seconds since the Tripwire database was updated.
-                local TRIPDB_UPDATE=$(stat -c %Y /var/lib/tripwire/${HOSTNAME}.twd)
-                if [ -d /var/lib/tripwire/report ]; then
-                    # Test to be sure reports exist.  Otherwise generates errors.
-                    if [[ $(ls /var/lib/tripwire/report/${HOSTNAME}*.twr 2>/dev/null)  ]]; then 
-                        # get time the last report was submitted
-                        local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
-                        if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
-                            PS1+="\[$(set_color yellow)\][Tripwire+]\[$(set_color)\] "
-                        fi
-                    fi
-                fi
-            fi
-        fi
     fi
 
     #  GIT status
@@ -401,6 +356,29 @@ function promptcmd() {
 		PS1+="\[$(set_color yellow)\][cmdtime:${TOTTIME}]\[$(set_color)\] "
 	    fi
 	fi
+    fi
+
+    # Display if new Tripwire reports have been generated and the core database
+    # needs updating.
+    if [ ${load_part_prompt_tripwire} ]; then
+        if [[ $(pgrep -f "sudo tripwire --check*") ]] || [[ $(pgrep -u root -f /usr/sbin/tripwire) ]]; then
+            PS1+="\[$(set_color red)\][TW: Check]\[$(set_color)\] "
+        else
+            if [ -f /var/lib/tripwire/${HOSTNAME}.twd ]; then
+                # get time in seconds since the Tripwire database was updated.
+                local TRIPDB_UPDATE=$(stat -c %Y /var/lib/tripwire/${HOSTNAME}.twd)
+                if [ -d /var/lib/tripwire/report ]; then
+                    # Test to be sure reports exist.  Otherwise generates errors.
+                    if [[ $(ls /var/lib/tripwire/report/${HOSTNAME}*.twr 2>/dev/null)  ]]; then 
+                        # get time the last report was submitted
+                        local TRIPREP_BIRTH=$(stat -c %Y $(ls -1ct /var/lib/tripwire/report/${HOSTNAME}*.twr | head -1))
+                        if [ ${TRIPDB_UPDATE} -lt ${TRIPREP_BIRTH} ]; then
+                            PS1+="\[$(set_color yellow)\][TW:+]\[$(set_color)\] "
+                        fi
+                    fi
+                fi
+            fi
+        fi
     fi
 
     # Bracket {
