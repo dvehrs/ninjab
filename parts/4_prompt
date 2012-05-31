@@ -12,7 +12,7 @@ int_ninjab_available_parts="$int_ninjab_available_parts 4_prompt"
 #-------------------------------------------------------------
 # Orginal Filename:      4_prompt
 # Author:    Dave Vehrs
-# Last Modified: 31 May 2012 02:55:05 PM by Dave
+# Last Modified: 31 May 2012 03:26:37 PM by Dave
 # Edited from time to time by Lars Solberg (xeor) 2008-2011
 #  - Added exit code status if >0 (Found on a forum, from Dave Vehrs)
 #  - Minor changes, dont remember what it was..
@@ -139,8 +139,19 @@ function promptcmd() {
                 # Need to test Telnet
                 local CONNECTION_TYPE=TELNET
                 local TITLE_PREFIX="TELNET: "
+            elif [[ "${grandparent_pname}" == "init" ]]; then
+                # Added this check here for local console sessions will
+                # mistakenly pass the parent_process test.  However the
+                # grandparent process will be init.
+                local CONNECTION_TYPE=LOCAL
+                local TITLE_PREFIX="LOCAL: "
+            else
+                local CONNECTION_TYPE=UNKNOWN
+                local TITLE_PREFIX="Unknown Session type: "
             fi
         else
+            # In X Windows sessions, most terminal sessions appear to fail the
+            # parent_process test for "login".  That's why this piece is here.
             local CONNECTION_TYPE=LOCAL
             local TITLE_PREFIX="LOCAL: "
         fi
@@ -150,16 +161,11 @@ function promptcmd() {
         local TITLE_PREFIX+="SUDO: "
     fi
 
-    
-
-    # As Sudo session can be within any of the other above session types, it
-    # needs to be moved to after the loop and appending it's information to the
-    # existing TITLE_PREFIX.
-
     # Titlebar
-    # Window Titles are correct if you do a RSH connection to another host from
-    # within a Screen session.  However if you do a Screen session within an
-    # existing RSH session the title will show Screen as if it was local.
+    # BUG: Window Titles are correct if you do a RSH connection to another host
+    # from within a Screen session.  However if you do a Screen session within
+    # an existing RSH session the title will show just the Screen portion as if
+    # it were a local session.
     if [ -z "${load_part_prompt_dontset_titlebar}" ]; then
         case ${TERM} in
             xterm*  )
@@ -255,6 +261,9 @@ function promptcmd() {
             ;;
         TELNET )
             PS1+="\[$(set_color yellow)\]\h\[$(set_color)\] "
+            ;;
+        UNKNOWN )
+            PS1+="\[$(set_color ered)\]\h\[$(set_color)\] "
             ;;
     esac
 
